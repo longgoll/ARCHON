@@ -1,0 +1,28 @@
+{
+  "name": "create-archon",
+  "version": "0.1.0",
+  "description": "Interactive CLI scaffolding tool for Archon - AI Architectural Guardian",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "create-archon": "./dist/index.js",
+    "archon-init": "./dist/init.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@archon/core": "workspace:*",
+    "@archon/skeleton": "workspace:*",
+    "@clack/prompts": "^0.9.1",
+    "commander": "^13.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "rimraf": "^6.0.1"
+  }
+}

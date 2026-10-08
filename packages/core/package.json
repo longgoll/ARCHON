@@ -1,0 +1,35 @@
+{
+  "name": "@archon/core",
+  "version": "0.1.0",
+  "description": "Core AST linter and architectural boundary enforcer for Archon",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "archon": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "tsx --test test/linter.test.ts",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@archon/skeleton": "workspace:*",
+    "commander": "^13.1.0",
+    "fast-glob": "^3.3.3",
+    "picocolors": "^1.1.1",
+    "typescript": "^5.7.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "rimraf": "^6.0.1"
+  }
+}
