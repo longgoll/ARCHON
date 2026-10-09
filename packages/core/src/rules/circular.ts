@@ -23,22 +23,34 @@ export interface CircularCycle {
  * Extracts all cross-module imports from a list of scanned source files.
  */
 export function extractCrossModuleImports(
-  files: { filePath: string; content: string }[]
+  files: { filePath: string; content: string }[],
+  config?: GuardianConfig
 ): FileImportRecord[] {
   const records: FileImportRecord[] = [];
+
+  const rawClientDir = config?.rules?.moduleBoundary?.clientModulesDir || 'client/src/modules';
+  const rawServerDir = config?.rules?.moduleBoundary?.serverModulesDir || 'server/src/modules';
+
+  const cleanClientDir = rawClientDir.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  const cleanServerDir = rawServerDir.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const clientRegex = new RegExp(`(?:^|/)${escapeRegex(cleanClientDir)}/([^/]+)/`);
+  const serverRegex = new RegExp(`(?:^|/)${escapeRegex(cleanServerDir)}/([^/]+)/`);
+  const genericRegex = /(?:^|\/)src\/modules\/([^/]+)\//;
 
   for (const { filePath, content } of files) {
     const normalized = filePath.replace(/\\/g, '/');
 
-    // Detect if this file belongs to a module:
-    // client/src/modules/<mod>/... or server/src/modules/<mod>/...
-    const clientMatch = normalized.match(/(?:^|\/)client\/src\/modules\/([^/]+)\//);
-    const serverMatch = normalized.match(/(?:^|\/)server\/src\/modules\/([^/]+)\//);
+    // Detect if this file belongs to a module
+    const clientMatch = normalized.match(clientRegex);
+    const serverMatch = normalized.match(serverRegex);
+    const genericMatch = (!clientMatch && !serverMatch) ? normalized.match(genericRegex) : null;
 
-    if (!clientMatch && !serverMatch) continue;
+    if (!clientMatch && !serverMatch && !genericMatch) continue;
 
-    const side = clientMatch ? 'client' : 'server';
-    const sourceModule = (clientMatch ? clientMatch[1] : serverMatch![1]);
+    const side: 'client' | 'server' = (clientMatch || (!serverMatch && genericMatch)) ? 'client' : 'server';
+    const sourceModule = clientMatch ? clientMatch[1] : (serverMatch ? serverMatch[1] : genericMatch![1]);
 
     let scriptKind = ts.ScriptKind.TSX;
     if (filePath.endsWith('.ts')) scriptKind = ts.ScriptKind.TS;
@@ -60,7 +72,7 @@ export function extractCrossModuleImports(
         ts.isStringLiteral(node.moduleSpecifier)
       ) {
         const specifier = node.moduleSpecifier.text;
-        const aliasMatch = specifier.match(/^@\/modules\/([^/]+)/);
+        const aliasMatch = specifier.match(/^(?:@\/modules|@modules|~\/modules)\/([^/]+)/);
 
         if (aliasMatch) {
           const targetModule = aliasMatch[1];
@@ -167,7 +179,7 @@ export function checkCircularDependencies(
     return [];
   }
 
-  const importRecords = extractCrossModuleImports(files);
+  const importRecords = extractCrossModuleImports(files, config);
   const cycles = findModuleCycles(importRecords);
   const severity = config.strictness === 'relaxed' ? 'warning' : 'error';
 

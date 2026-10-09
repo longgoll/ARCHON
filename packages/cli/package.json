@@ -9,10 +9,14 @@
     "create-archon": "./dist/index.js",
     "archon-init": "./dist/init.js"
   },
+  "files": [
+    "dist",
+    "templates"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-templates.mjs",
     "dev": "tsc --watch",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist templates"
   },
   "dependencies": {
     "@archon/core": "workspace:*",

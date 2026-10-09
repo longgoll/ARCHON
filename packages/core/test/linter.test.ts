@@ -121,6 +121,39 @@ describe('Guardian Core Linter Rules', () => {
     assert.strictEqual(violations.length, 0);
   });
 
+  it('should detect circular module dependency with custom configured module directories', () => {
+    const customConfig = {
+      ...DEFAULT_CONFIG,
+      rules: {
+        ...DEFAULT_CONFIG.rules,
+        moduleBoundary: {
+          clientModulesDir: 'src/features',
+          serverModulesDir: 'api/features',
+          gatewayFile: 'index.ts',
+          allowDeepImports: false,
+        },
+      },
+    };
+
+    const cartFile = {
+      filePath: 'src/features/cart/ui/cart.tsx',
+      content: `import { checkout } from '@/modules/checkout';`,
+    };
+    const checkoutFile = {
+      filePath: 'src/features/checkout/services/checkout.ts',
+      content: `import { getCart } from '@/modules/cart';`,
+    };
+
+    const violations = checkCircularDependencies(
+      [cartFile, checkoutFile],
+      customConfig
+    );
+
+    assert.strictEqual(violations.length, 1);
+    assert.strictEqual(violations[0].rule, 'circular-dependency');
+    assert.match(violations[0].message, /cart ➔ checkout ➔ cart/);
+  });
+
   it('should decompose bloated React component by extracting sub-component and hook', () => {
     const tempDir = path.resolve(__dirname, 'temp-decomposer');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });

@@ -16,6 +16,8 @@
     "watch": "archon watch"
   },
   "devDependencies": {
+    "@archon/core": "^0.1.0",
+    "@archon/skeleton": "^0.1.0",
     "concurrently": "^9.1.2",
     "simple-git-hooks": "^2.11.1"
   },

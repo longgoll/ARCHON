@@ -40,13 +40,22 @@ function copyDirRecursive(src: string, dest: string, projectName: string) {
 export async function scaffoldProject(options: ScaffoldOptions): Promise<void> {
   const { projectName, targetDir, language, strictness } = options;
 
-  // Determine template directory
-  // Find templates folder relative to package root
-  const templateName = language === 'typescript' ? 'vite-express-ts' : 'vite-express-ts'; // JS template uses same structure with js extensions
-  const templateDir = path.resolve(__dirname, '../../../templates', templateName);
+  // Determine template directory across both local monorepo and packaged npm distribution
+  const templateName = language === 'typescript' ? 'vite-express-ts' : 'vite-express-ts';
+  const templateCandidates = [
+    path.resolve(__dirname, '../templates', templateName),
+    path.resolve(__dirname, '../../templates', templateName),
+    path.resolve(__dirname, '../../../templates', templateName),
+    path.resolve(process.cwd(), 'templates', templateName),
+  ];
 
-  if (!fs.existsSync(templateDir)) {
-    throw new Error(`Template directory not found: ${templateDir}`);
+  const templateDir = templateCandidates.find((dir) => fs.existsSync(dir));
+
+  if (!templateDir) {
+    throw new Error(
+      `Template directory '${templateName}' not found. Searched in:\n` +
+      templateCandidates.map((c) => `  - ${c}`).join('\n')
+    );
   }
 
   // 1. Copy template files

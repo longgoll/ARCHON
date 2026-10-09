@@ -84,8 +84,17 @@ export function checkModuleBoundaries(
   }
 
   // 2. Check Modular Monolith Deep Imports
-  // Regex to detect modules path: e.g. client/src/modules/<modName>/... or server/src/modules/<modName>/...
-  const moduleMatch = normalizedPath.match(/src\/modules\/([^/]+)\//);
+  const rawClientDir = config?.rules?.moduleBoundary?.clientModulesDir || 'client/src/modules';
+  const rawServerDir = config?.rules?.moduleBoundary?.serverModulesDir || 'server/src/modules';
+  const cleanClientDir = rawClientDir.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  const cleanServerDir = rawServerDir.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const clientMatch = normalizedPath.match(new RegExp(`(?:^|/)${escapeRegex(cleanClientDir)}/([^/]+)/`));
+  const serverMatch = normalizedPath.match(new RegExp(`(?:^|/)${escapeRegex(cleanServerDir)}/([^/]+)/`));
+  const fallbackMatch = normalizedPath.match(/(?:^|\/)src\/modules\/([^/]+)\//);
+
+  const moduleMatch = clientMatch || serverMatch || fallbackMatch;
   if (!moduleMatch) {
     return violations;
   }
@@ -94,7 +103,7 @@ export function checkModuleBoundaries(
 
   for (const imp of imports) {
     // Check alias imports: e.g. @/modules/<targetMod>/<deepPath>
-    const aliasMatch = imp.importPath.match(/^@\/modules\/([^/]+)(\/.*)?$/);
+    const aliasMatch = imp.importPath.match(/^(?:@\/modules|@modules|~\/modules)\/([^/]+)(\/.*)?$/);
     if (aliasMatch) {
       const targetModule = aliasMatch[1];
       const deepPath = aliasMatch[2]; // e.g. /ui/login-form or /server/db

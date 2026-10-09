@@ -11,12 +11,33 @@ export function watchProjectSkeleton(options: WatcherOptions = {}) {
   const cwd = options.cwd || process.cwd();
   const debounceMs = options.debounceMs || 250;
 
+  // Read guardian.config.json if available
+  let customClientDir: string | undefined;
+  let customServerDir: string | undefined;
+
+  const configPath = path.resolve(cwd, 'guardian.config.json');
+  if (fs.existsSync(configPath)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      if (cfg?.rules?.moduleBoundary?.clientModulesDir) {
+        customClientDir = path.resolve(cwd, cfg.rules.moduleBoundary.clientModulesDir);
+      }
+      if (cfg?.rules?.moduleBoundary?.serverModulesDir) {
+        customServerDir = path.resolve(cwd, cfg.rules.moduleBoundary.serverModulesDir);
+      }
+    } catch {}
+  }
+
   // Directories to watch
-  const targetDirs = [
+  const candidateDirs = [
+    customClientDir,
+    customServerDir,
     path.resolve(cwd, 'client/src/modules'),
     path.resolve(cwd, 'server/src/modules'),
     path.resolve(cwd, 'src/modules'),
-  ].filter((d) => fs.existsSync(d));
+  ].filter((d): d is string => Boolean(d && fs.existsSync(d)));
+
+  const targetDirs = Array.from(new Set(candidateDirs));
 
   if (targetDirs.length === 0) {
     console.log(pc.yellow('⚠ No modular directories found to watch (checked client/src/modules, server/src/modules, src/modules)'));

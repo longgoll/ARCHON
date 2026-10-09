@@ -173,6 +173,24 @@ export function decomposeFile(targetFilePath: string): DecomposeResult {
     .map((s) => s.getText(sourceFile))
     .join('\n');
 
+/**
+ * Adjusts relative imports (./ and ../) when copying imports into a subfolder (components/ or hooks/).
+ */
+function adjustImportsForSubdir(importBlock: string): string {
+  return importBlock.replace(
+    /((?:from\s+|import\s+)['"])(\.[^'"]+)(['"])/g,
+    (_match, prefix, specifier, suffix) => {
+      if (specifier.startsWith('./')) {
+        return `${prefix}../${specifier.slice(2)}${suffix}`;
+      }
+      if (specifier.startsWith('../')) {
+        return `${prefix}../${specifier}${suffix}`;
+      }
+      return `${prefix}${specifier}${suffix}`;
+    }
+  );
+}
+
   const extractedList: DecomposeResult['extractedFiles'] = [];
   const newImportLines: string[] = [];
 
@@ -202,9 +220,11 @@ export function decomposeFile(targetFilePath: string): DecomposeResult {
       extractedCode = `export ${extractedCode}`;
     }
 
+    const adjustedImports = adjustImportsForSubdir(originalImportStatements);
+
     const fileContent = [
       '// AUTO-EXTRACTED BY ARCHON AUTO-DECOMPOSER ENGINE',
-      originalImportStatements,
+      adjustedImports,
       '',
       extractedCode,
       '',

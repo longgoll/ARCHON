@@ -215,13 +215,28 @@ export async function generateProjectSkeleton(
     return files.map((f) => f.replace(/\\/g, '/'));
   }
 
+  let clientDir = 'client/src/modules';
+  let serverDir = 'server/src/modules';
+
+  const configPath = path.resolve(cwd, 'guardian.config.json');
+  if (fs.existsSync(configPath)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      if (cfg?.rules?.moduleBoundary?.clientModulesDir) {
+        clientDir = cfg.rules.moduleBoundary.clientModulesDir.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+      }
+      if (cfg?.rules?.moduleBoundary?.serverModulesDir) {
+        serverDir = cfg.rules.moduleBoundary.serverModulesDir.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+      }
+    } catch {}
+  }
+
   // 1. Scan client modules
-  const clientGateways = await fg('client/src/modules/*/index.{ts,tsx,js,jsx}', { cwd });
+  const clientGateways = await fg(`${clientDir}/*/index.{ts,tsx,js,jsx}`, { cwd });
   for (const gateway of clientGateways) {
     const normalized = gateway.replace(/\\/g, '/');
-    const parts = normalized.split('/');
-    const moduleName = parts[3];
-    const modDir = `client/src/modules/${moduleName}`;
+    const modDir = path.dirname(normalized).replace(/\\/g, '/');
+    const moduleName = path.basename(modDir);
     const exports = extractModuleExports(path.resolve(cwd, gateway));
     const internalFiles = await collectInternalFiles(modDir);
 
@@ -235,12 +250,11 @@ export async function generateProjectSkeleton(
   }
 
   // 2. Scan server modules
-  const serverGateways = await fg('server/src/modules/*/index.{ts,js}', { cwd });
+  const serverGateways = await fg(`${serverDir}/*/index.{ts,js}`, { cwd });
   for (const gateway of serverGateways) {
     const normalized = gateway.replace(/\\/g, '/');
-    const parts = normalized.split('/');
-    const moduleName = parts[3];
-    const modDir = `server/src/modules/${moduleName}`;
+    const modDir = path.dirname(normalized).replace(/\\/g, '/');
+    const moduleName = path.basename(modDir);
     const exports = extractModuleExports(path.resolve(cwd, gateway));
     const internalFiles = await collectInternalFiles(modDir);
 
@@ -262,23 +276,24 @@ export async function generateProjectSkeleton(
     });
   }
 
-  // 3. Scan root src/modules if exists
-  const rootGateways = await fg('src/modules/*/index.{ts,tsx,js,jsx}', { cwd });
-  for (const gateway of rootGateways) {
-    const normalized = gateway.replace(/\\/g, '/');
-    const parts = normalized.split('/');
-    const moduleName = parts[2];
-    const modDir = `src/modules/${moduleName}`;
-    const exports = extractModuleExports(path.resolve(cwd, gateway));
-    const internalFiles = await collectInternalFiles(modDir);
+  // 3. Scan root src/modules if exists and not already covered
+  if (clientDir !== 'src/modules' && serverDir !== 'src/modules') {
+    const rootGateways = await fg('src/modules/*/index.{ts,tsx,js,jsx}', { cwd });
+    for (const gateway of rootGateways) {
+      const normalized = gateway.replace(/\\/g, '/');
+      const modDir = path.dirname(normalized).replace(/\\/g, '/');
+      const moduleName = path.basename(modDir);
+      const exports = extractModuleExports(path.resolve(cwd, gateway));
+      const internalFiles = await collectInternalFiles(modDir);
 
-    moduleSkeletons.push({
-      moduleName,
-      side: 'client',
-      gatewayPath: normalized,
-      exports,
-      internalFiles,
-    });
+      moduleSkeletons.push({
+        moduleName,
+        side: 'client',
+        gatewayPath: normalized,
+        exports,
+        internalFiles,
+      });
+    }
   }
 
   const skeleton: ProjectSkeleton = {

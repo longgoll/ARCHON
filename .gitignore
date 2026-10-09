@@ -3,3 +3,4 @@ dist
 .context
 *.log
 .DS_Store
+packages/cli/templates
