@@ -1,0 +1,24 @@
+{
+  "$schema": "https://archon.dev/schema.json",
+  "preset": "modular-monolith",
+  "language": "typescript",
+  "strictness": "relaxed",
+  "sourcePatterns": [
+    "packages/*/src/**/*.{ts,tsx}"
+  ],
+  "rules": {
+    "maxFileLines": 1500,
+    "maxComponentLines": 1500,
+    "ignoreBlankLines": true,
+    "preventCircularDependencies": true,
+    "moduleBoundary": {
+      "clientModulesDir": "packages/core/src",
+      "serverModulesDir": "packages/core/src",
+      "gatewayFile": "index.ts",
+      "allowDeepImports": false
+    },
+    "dependencyFreeze": {
+      "enabled": false
+    }
+  }
+}

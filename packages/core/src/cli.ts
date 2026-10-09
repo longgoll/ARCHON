@@ -159,6 +159,7 @@ program
   .description('Launch Archon Studio web cockpit for interactive architecture visualization & health score')
   .option('-p, --port <number>', 'Port to listen on', '4321')
   .option('-c, --cwd <path>', 'Working directory', process.cwd())
+  .option('--no-open', 'Do not open browser automatically')
   .action(async (options) => {
     try {
       const port = parseInt(options.port, 10);
@@ -167,6 +168,17 @@ program
       console.log(pc.bold(pc.cyan('\n🛡️  ARCHON STUDIO ACTIVE!')));
       console.log(pc.green(`✔ Web Dashboard running at: ${pc.underline(url)}`));
       console.log(pc.gray('Press Ctrl+C to close studio.\n'));
+
+      if (options.open !== false) {
+        const { exec } = await import('node:child_process');
+        const startCmd =
+          process.platform === 'win32'
+            ? `start ${url}`
+            : process.platform === 'darwin'
+            ? `open ${url}`
+            : `xdg-open ${url}`;
+        exec(startCmd, () => {});
+      }
     } catch (error: any) {
       console.error(pc.red(`Archon Studio Error: ${error.message}`));
       process.exit(1);

@@ -20,11 +20,13 @@ export async function runLinter(options: RunLinterOptions): Promise<LintReport> 
   const scannedFiles: { filePath: string; content: string }[] = [];
 
   // 1. Scan source code files
-  const filePatterns = [
-    'client/src/**/*.{ts,tsx,js,jsx}',
-    'server/src/**/*.{ts,js}',
-    'src/**/*.{ts,tsx,js,jsx}',
-  ];
+  const filePatterns = config.sourcePatterns && config.sourcePatterns.length > 0
+    ? config.sourcePatterns
+    : [
+        'client/src/**/*.{ts,tsx,js,jsx}',
+        'server/src/**/*.{ts,js}',
+        'src/**/*.{ts,tsx,js,jsx}',
+      ];
 
   const files = await fg(filePatterns, {
     cwd,

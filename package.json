@@ -9,6 +9,7 @@
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
     "test:e2e": "node scripts/test-e2e.mjs",
+    "archon": "node packages/core/dist/cli.js",
     "clean": "pnpm -r run clean"
   },
   "devDependencies": {

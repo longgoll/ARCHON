@@ -6,6 +6,7 @@ import {
   generateProjectSkeleton,
   generateContextMapMarkdown,
   generateContractsDeclaration,
+  checkContractDrift,
 } from '@archon/skeleton';
 import { loadGuardianConfig } from '../config/loader.js';
 import { runLinter } from '../linter.js';
@@ -20,17 +21,27 @@ export interface StartStudioOptions {
 
 export async function collectStudioData(cwd: string) {
   const config = loadGuardianConfig(cwd);
-  const [skeleton, report] = await Promise.all([
+  const [skeleton, report, driftReport] = await Promise.all([
     generateProjectSkeleton({ cwd }),
     runLinter({ cwd, config }),
+    checkContractDrift({ cwd }).catch(() => ({
+      timestamp: new Date().toISOString(),
+      totalClientCalls: 0,
+      totalServerRoutes: 0,
+      issues: [],
+      orphanRoutes: [],
+      hasErrors: false,
+    })),
   ]);
 
   // Read scanned source files for graph dependencies
-  const filePatterns = [
-    'client/src/**/*.{ts,tsx,js,jsx}',
-    'server/src/**/*.{ts,js}',
-    'src/**/*.{ts,tsx,js,jsx}',
-  ];
+  const filePatterns = config.sourcePatterns && config.sourcePatterns.length > 0
+    ? config.sourcePatterns
+    : [
+        'client/src/**/*.{ts,tsx,js,jsx}',
+        'server/src/**/*.{ts,js}',
+        'src/**/*.{ts,tsx,js,jsx}',
+      ];
   const files = await fg(filePatterns, {
     cwd,
     ignore: ['**/node_modules/**', '**/dist/**', '**/.context/**', '**/*.d.ts'],
@@ -108,6 +119,7 @@ export async function collectStudioData(cwd: string) {
     },
     contextMap: contextMapMarkdown,
     contractsDts: contractsContent,
+    driftReport,
   };
 }
 

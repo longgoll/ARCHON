@@ -1,0 +1,33 @@
+{
+  "$schema": "https://archon.dev/schema.json",
+  "preset": "vite-express-modular",
+  "language": "typescript",
+  "strictness": "strict",
+  "sourcePatterns": [
+    "client/src/**/*.{ts,tsx}",
+    "server/src/**/*.{ts,js}"
+  ],
+  "rules": {
+    "maxFileLines": 200,
+    "maxComponentLines": 120,
+    "ignoreBlankLines": false,
+    "preventCircularDependencies": true,
+    "moduleBoundary": {
+      "clientModulesDir": "client/src/modules",
+      "serverModulesDir": "server/src/modules",
+      "gatewayFile": "index.ts",
+      "allowDeepImports": false
+    },
+    "dependencyFreeze": {
+      "enabled": true,
+      "allowedLibraries": [
+        "react",
+        "react-dom",
+        "express",
+        "cors",
+        "zod",
+        "lucide-react"
+      ]
+    }
+  }
+}

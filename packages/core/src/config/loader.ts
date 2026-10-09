@@ -6,6 +6,11 @@ export const DEFAULT_CONFIG: GuardianConfig = {
   preset: 'vite-express-modular',
   language: 'typescript',
   strictness: 'strict',
+  sourcePatterns: [
+    'client/src/**/*.{ts,tsx,js,jsx}',
+    'server/src/**/*.{ts,js}',
+    'src/**/*.{ts,tsx,js,jsx}',
+  ],
   rules: {
     maxFileLines: 200,
     maxComponentLines: 120,

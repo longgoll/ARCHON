@@ -28,6 +28,11 @@ export const GuardianConfigSchema = z.object({
   preset: z.string().default('vite-express-modular'),
   language: z.enum(['typescript', 'javascript']).default('typescript'),
   strictness: StrictnessLevelSchema.default('strict'),
+  sourcePatterns: z.array(z.string()).default([
+    'client/src/**/*.{ts,tsx,js,jsx}',
+    'server/src/**/*.{ts,js}',
+    'src/**/*.{ts,tsx,js,jsx}',
+  ]),
   rules: RulesConfigSchema.default({}),
 });
 

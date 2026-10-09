@@ -1056,13 +1056,29 @@ export function getStudioHtml(initialData: any): string {
         totalRoutes += (m.routes ? m.routes.length : 0);
       });
       document.getElementById('symbols-count').innerText = totalExports + totalRoutes;
-      document.getElementById('contract-breakdown').innerText = totalRoutes + ' Endpoints • ' + totalExports + ' Symbols';
+
+      const driftReport = appData.driftReport || { issues: [], totalClientCalls: 0 };
+      const driftIssues = driftReport.issues || [];
+      const contractBadge = document.getElementById('contract-badge');
+
+      if (driftIssues.length > 0) {
+        contractBadge.className = 'stat-badge stat-badge-danger';
+        contractBadge.innerText = driftIssues.length + ' DRIFTS!';
+        document.getElementById('contract-breakdown').innerText = 
+          totalRoutes + ' Routes • ' + driftIssues.length + ' Client API Mismatch';
+      } else {
+        contractBadge.className = 'stat-badge stat-badge-healthy';
+        contractBadge.innerText = 'ZERO DRIFT';
+        document.getElementById('contract-breakdown').innerText = 
+          totalRoutes + ' Endpoints • ' + totalExports + ' Symbols • Synced';
+      }
 
       // Tab badges
+      const totalViolationsCount = report.violations.length + driftIssues.length;
       document.getElementById('tab-modules-count').innerText = modules.length;
       const violCountEl = document.getElementById('tab-violations-count');
-      violCountEl.innerText = report.violations.length;
-      if (report.violations.length > 0) {
+      violCountEl.innerText = totalViolationsCount;
+      if (totalViolationsCount > 0) {
         violCountEl.className = 'tab-badge tab-badge-error';
       } else {
         violCountEl.className = 'tab-badge';
@@ -1072,7 +1088,7 @@ export function getStudioHtml(initialData: any): string {
       renderModules(modules);
 
       // Render Violations List
-      renderViolations(report.violations);
+      renderViolations(report.violations, driftIssues);
 
       // Render Skeleton Code
       renderSkeletonCode();
@@ -1128,24 +1144,45 @@ export function getStudioHtml(initialData: any): string {
       });
     }
 
-    function renderViolations(violations) {
+    function renderViolations(violations, driftIssues = []) {
       const container = document.getElementById('violations-container');
       container.innerHTML = '';
 
-      if (!violations || violations.length === 0) {
+      const totalCount = (violations ? violations.length : 0) + driftIssues.length;
+
+      if (totalCount === 0) {
         container.innerHTML = \`
           <div class="empty-violations">
             <div class="empty-icon">🛡️</div>
             <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--accent);">Architectural Boundaries Pristine!</h3>
             <p style="color: var(--text-muted); max-width: 500px; font-size: 0.9rem;">
-              Zero line-limit violations, zero cross-boundary deep imports, and zero circular dependencies detected across the entire codebase.
+              Zero line-limit violations, zero cross-boundary deep imports, zero circular dependencies, and zero API contract drift detected across the entire codebase.
             </p>
           </div>
         \`;
         return;
       }
 
-      violations.forEach((v, index) => {
+      // Render Drift Issues first
+      driftIssues.forEach((issue) => {
+        const card = document.createElement('div');
+        card.className = 'violation-card';
+        card.innerHTML = \`
+          <div class="violation-content">
+            <div class="violation-title-row">
+              <span class="violation-badge badge-error">CONTRACT DRIFT</span>
+              <span class="violation-rule">\${issue.type}</span>
+            </div>
+            <div class="violation-loc">📍 \${issue.file}:\${issue.line}</div>
+            <div class="violation-msg">\${issue.message}</div>
+            <div class="violation-remediation">🛠️ \${issue.remediation}</div>
+          </div>
+        \`;
+        container.appendChild(card);
+      });
+
+      // Render Linter Violations
+      (violations || []).forEach((v) => {
         const card = document.createElement('div');
         const isError = v.severity === 'error';
         card.className = 'violation-card' + (isError ? '' : ' warning-card');
