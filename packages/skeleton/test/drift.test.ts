@@ -178,4 +178,65 @@ describe('Archon Contract Drift Checker (FE vs BE)', () => {
       cleanupTestRepo();
     }
   });
+
+  it('should resolve mount prefix when router uses relative paths mounted via app.use', async () => {
+    setupTestRepo();
+    try {
+      // 1. Create server app.ts mounting auth router under /api/auth
+      const appFile = path.resolve(fixtureDir, 'server/src/app.ts');
+      fs.writeFileSync(
+        appFile,
+        `
+        import express from 'express';
+        import { authRouter } from './modules/auth/routes/auth.routes.js';
+        const app = express();
+        app.use('/api/auth', authRouter);
+        `
+      );
+
+      // 2. Create server route with relative path /login
+      fs.mkdirSync(path.resolve(fixtureDir, 'server/src/modules/auth/routes'), { recursive: true });
+      const authRouteFile = path.resolve(
+        fixtureDir,
+        'server/src/modules/auth/routes/auth.routes.ts'
+      );
+      fs.writeFileSync(
+        authRouteFile,
+        `
+        import { Router } from 'express';
+        export const authRouter = Router();
+        authRouter.post('/login', (req, res) => res.json({ ok: true }));
+        `
+      );
+
+      // 3. Create client calling /api/auth/login
+      fs.mkdirSync(path.resolve(fixtureDir, 'client/src/modules/auth/ui'), { recursive: true });
+      const clientFile = path.resolve(fixtureDir, 'client/src/modules/auth/ui/auth-view.tsx');
+      fs.writeFileSync(
+        clientFile,
+        `
+        import React from 'react';
+        export function AuthView() {
+          const login = async () => {
+            await fetch('/api/auth/login', { method: 'POST' });
+          };
+          return <div>Auth</div>;
+        }
+        `
+      );
+
+      const report = await checkContractDrift({
+        cwd: fixtureDir,
+        clientDir: 'client/src',
+        serverDir: 'server/src',
+      });
+
+      assert.strictEqual(report.hasErrors, false, 'Expected zero drift errors');
+      assert.strictEqual(report.issues.length, 0);
+      assert.strictEqual(report.totalClientCalls, 1);
+      assert.strictEqual(report.totalServerRoutes, 1);
+    } finally {
+      cleanupTestRepo();
+    }
+  });
 });

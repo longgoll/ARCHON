@@ -44,6 +44,7 @@ npx archon-init
 | `archon skeleton` (hoặc `archon map`) | Sinh `.context/MAP.md`, `architecture.json`, `skeleton.d.ts` và `contracts.d.ts`. |
 | `archon watch` | Lắng nghe thay đổi mã nguồn trong mili-giây, tự động đồng bộ `.context/MAP.md` tức thì. |
 | `archon studio` (hoặc `archon visual`) | Khởi chạy Archon Studio Web Cockpit tại `http://localhost:4321`. |
+| `archon init` | Khởi tạo Archon vào bất kỳ dự án có sẵn nào (Zero-lockin: tự động phát hiện cấu trúc repo, sinh `guardian.config.json`, `.cursor/mcp.json` và `AGENTS.md`). |
 
 ---
 

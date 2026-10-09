@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import fg from 'fast-glob';
 import { RouteEndpoint } from './extractor.js';
-import { extractRoutesFromFile } from './contract.js';
+import { extractRoutesFromFile, discoverServerMountPrefixes } from './contract.js';
 
 export interface ClientApiCall {
   file: string;
@@ -111,8 +111,11 @@ export function extractClientApiCalls(filePath: string): ClientApiCall[] {
       const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
       const lineNumber = line + 1;
 
-      // 1. fetch('/api/...', { method: 'POST' })
-      if (ts.isIdentifier(node.expression) && node.expression.text === 'fetch' && node.arguments.length >= 1) {
+      // 1. fetch('/api/...', { method: 'POST' }) or archonFetch(...)
+      const fnName = ts.isIdentifier(node.expression) ? node.expression.text.toLowerCase() : '';
+      const isFetchLike = ['fetch', 'archonfetch', 'apifetch', 'request', 'customfetch'].includes(fnName);
+
+      if (isFetchLike && node.arguments.length >= 1) {
         const rawUrl = getUrlFromNode(node.arguments[0]);
         if (rawUrl && (rawUrl.startsWith('/api') || rawUrl.startsWith('api/'))) {
           const method = getMethodFromOptions(node.arguments[1]);
@@ -178,10 +181,19 @@ export async function checkContractDrift(
     { cwd }
   );
 
+  const mountMap = discoverServerMountPrefixes(cwd, serverDir);
   const serverRoutes: RouteEndpoint[] = [];
+  const seenRouteKeys = new Set<string>();
+
   for (const sf of serverFiles) {
-    const extracted = extractRoutesFromFile(path.resolve(cwd, sf));
-    serverRoutes.push(...extracted);
+    const extracted = extractRoutesFromFile(path.resolve(cwd, sf), { mountMap });
+    for (const r of extracted) {
+      const key = `${r.method} ${r.path}`;
+      if (!seenRouteKeys.has(key)) {
+        seenRouteKeys.add(key);
+        serverRoutes.push(r);
+      }
+    }
   }
 
   // 2. Collect all client API calls

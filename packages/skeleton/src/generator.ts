@@ -2,7 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import fg from 'fast-glob';
 import { extractModuleExports, ModuleSkeleton, ProjectSkeleton, RouteEndpoint } from './extractor.js';
-import { extractRoutesFromFile, generateContractsDeclaration } from './contract.js';
+import {
+  extractRoutesFromFile,
+  generateContractsDeclaration,
+  discoverServerMountPrefixes,
+} from './contract.js';
 
 export interface GenerateSkeletonOptions {
   cwd?: string;
@@ -250,6 +254,7 @@ export async function generateProjectSkeleton(
   }
 
   // 2. Scan server modules
+  const mountMap = discoverServerMountPrefixes(cwd, serverDir);
   const serverGateways = await fg(`${serverDir}/*/index.{ts,js}`, { cwd });
   for (const gateway of serverGateways) {
     const normalized = gateway.replace(/\\/g, '/');
@@ -261,9 +266,16 @@ export async function generateProjectSkeleton(
     // Extract Express API routes in this module
     const routeFiles = await fg([`${modDir}/**/routes/**/*.{ts,js}`, `${modDir}/**/*route*.{ts,js}`, `${gateway}`], { cwd });
     const routes: RouteEndpoint[] = [];
+    const seenRouteKeys = new Set<string>();
     for (const rf of routeFiles) {
-      const extracted = extractRoutesFromFile(path.resolve(cwd, rf));
-      routes.push(...extracted);
+      const extracted = extractRoutesFromFile(path.resolve(cwd, rf), { mountMap });
+      for (const r of extracted) {
+        const key = `${r.method} ${r.path}`;
+        if (!seenRouteKeys.has(key)) {
+          seenRouteKeys.add(key);
+          routes.push(r);
+        }
+      }
     }
 
     moduleSkeletons.push({

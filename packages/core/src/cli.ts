@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { loadGuardianConfig } from './config/loader.js';
@@ -248,6 +250,107 @@ program
       }
     } catch (error: any) {
       console.error(pc.red(`Archon CI Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
+
+// 8. archon init
+program
+  .command('init')
+  .description('Initialize Archon architectural guardrails in an existing project (brownfield zero-lockin)')
+  .option('-c, --cwd <path>', 'Working directory', process.cwd())
+  .action(async (options) => {
+    try {
+      const cwd = options.cwd;
+      console.log(pc.bold(pc.blue('\n🛡️  INITIALIZING ARCHON ARCHITECTURAL GUARDIAN...')));
+
+      const configPath = path.resolve(cwd, 'guardian.config.json');
+      if (!fs.existsSync(configPath)) {
+        // Auto-detect project structure
+        const hasClientServer = fs.existsSync(path.resolve(cwd, 'client')) && fs.existsSync(path.resolve(cwd, 'server'));
+        const hasSrcFeatures = fs.existsSync(path.resolve(cwd, 'src/features'));
+
+        let clientDir = 'src/modules';
+        let serverDir = 'src/modules';
+        let preset = 'modular-monolith';
+
+        if (hasClientServer) {
+          clientDir = 'client/src/modules';
+          serverDir = 'server/src/modules';
+          preset = 'vite-express-modular';
+        } else if (hasSrcFeatures) {
+          clientDir = 'src/features';
+          serverDir = 'src/features';
+          preset = 'feature-sliced';
+        }
+
+        const initialConfig = {
+          $schema: 'https://archon.dev/schema.json',
+          preset,
+          language: 'typescript',
+          strictness: 'strict',
+          rules: {
+            maxFileLines: 200,
+            maxComponentLines: 120,
+            ignoreBlankLines: false,
+            preventCircularDependencies: true,
+            moduleBoundary: {
+              clientModulesDir: clientDir,
+              serverModulesDir: serverDir,
+              gatewayFile: 'index.ts',
+              allowDeepImports: false,
+            },
+            dependencyFreeze: {
+              enabled: false,
+              allowedLibraries: [],
+            },
+          },
+        };
+
+        fs.writeFileSync(configPath, JSON.stringify(initialConfig, null, 2));
+        console.log(pc.green(`✔ Created guardian.config.json (detected preset: '${preset}')`));
+      } else {
+        console.log(pc.yellow(`ℹ guardian.config.json already exists.`));
+      }
+
+      // Generate .cursor/mcp.json for AI IDEs
+      const cursorDir = path.resolve(cwd, '.cursor');
+      if (!fs.existsSync(cursorDir)) fs.mkdirSync(cursorDir, { recursive: true });
+      const mcpPath = path.resolve(cursorDir, 'mcp.json');
+      if (!fs.existsSync(mcpPath)) {
+        fs.writeFileSync(
+          mcpPath,
+          JSON.stringify(
+            {
+              mcpServers: {
+                archon: {
+                  command: 'npx',
+                  args: ['-y', '@archon/mcp'],
+                },
+              },
+            },
+            null,
+            2
+          )
+        );
+        console.log(pc.green(`✔ Configured AI MCP server in .cursor/mcp.json`));
+      }
+
+      // Generate AGENTS.md constitution if not present
+      const agentsMdPath = path.resolve(cwd, 'AGENTS.md');
+      if (!fs.existsSync(agentsMdPath)) {
+        const constitution = `# 🛡️ AGENT CONSTITUTION & ARCHITECTURAL MANDATE\n\n> **Mandatory rules for all AI Coding Agents (Cursor, Windsurf, Claude Code, GitHub Copilot, Gemini)**\n\n1. **Check .context/MAP.md first**: Never re-implement duplicate functions.\n2. **File Size Limit**: Files must be under 200 lines (UI components under 120 lines).\n3. **Modular Boundary**: Always import from module gateway (\`index.ts\`). Never deep import internal files.\n4. **Pre-flight Validation**: Run \`npx archon check\` before committing.\n`;
+        fs.writeFileSync(agentsMdPath, constitution);
+        console.log(pc.green(`✔ Generated AI constitution: AGENTS.md`));
+      }
+
+      // Generate initial skeleton map
+      const skeleton = await generateProjectSkeleton({ cwd });
+      console.log(pc.green(`✔ Built initial Context Map (.context/MAP.md) with ${skeleton.modules.length} module(s).`));
+
+      console.log(pc.bold(pc.cyan('\n✨ Archon successfully initialized! AI Coding Guardian is now active.\n')));
+    } catch (error: any) {
+      console.error(pc.red(`Archon Init Error: ${error.message}`));
       process.exit(1);
     }
   });

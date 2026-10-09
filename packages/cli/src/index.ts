@@ -5,13 +5,35 @@ import path from 'node:path';
 import { scaffoldProject } from './scaffolder.js';
 
 async function main() {
+  const args = process.argv.slice(2);
+  const isHeadless = !process.stdout.isTTY || !process.stdin.isTTY || args.includes('-y') || args.includes('--yes');
+  const positionalArg = args.find((a) => !a.startsWith('-'));
+
+  if (isHeadless) {
+    const projectName = positionalArg || 'my-saas-app';
+    const targetDir = path.resolve(process.cwd(), projectName);
+    console.log(pc.bold(pc.blue(`\n 🛡️  AI ARCHITECTURAL GUARDIAN (ARCHON) [Non-Interactive Mode]`)));
+    console.log(pc.gray(`Scaffolding '${projectName}' into ${targetDir}...`));
+    await scaffoldProject({
+      projectName,
+      targetDir,
+      framework: 'vite-express',
+      language: 'typescript',
+      pattern: 'modular-monolith',
+      strictness: 'strict',
+      gitHooks: true,
+    });
+    console.log(pc.green(`✔ Scaffolding complete in ./${projectName}!\n`));
+    return;
+  }
+
   console.log('');
   p.intro(pc.bgBlue(pc.white(pc.bold(' 🛡️  AI ARCHITECTURAL GUARDIAN (ARCHON) '))));
 
   const projectName = await p.text({
     message: 'Project name:',
-    placeholder: 'my-saas-app',
-    defaultValue: 'my-saas-app',
+    placeholder: positionalArg || 'my-saas-app',
+    defaultValue: positionalArg || 'my-saas-app',
     validate: (value) => {
       if (!value) return 'Please enter a project name';
       if (!/^[a-zA-Z0-9-_]+$/.test(value)) return 'Project name can only contain alphanumeric characters, hyphens, and underscores';

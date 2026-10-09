@@ -110,3 +110,43 @@ Khi người dùng chọn JavaScript thuần thay vì TypeScript:
   }
   ```
 - Context Skeleton Builder sẽ bóc tách các comment JSDoc này để đưa vào `.context/architecture.json`, giúp AI vẫn nắm được type signatures mà không cần compile TypeScript.
+
+---
+
+## 4. TIÊU CHUẨN HIỆN ĐẠI (REACT 19 + EXPRESS 5 + ZERO DRIFT)
+
+Template `vite-express-ts` được thiết kế theo tiêu chuẩn công nghệ 2026:
+
+### React 19 Form Actions & `useActionState`
+- UI form sử dụng `useActionState` thay vì duy trì hàng loạt `useState` rải rác:
+  ```tsx
+  const [state, formAction, isPending] = useActionState(
+    async (_prev, formData) => {
+      return await loginApi(formData);
+    },
+    { error: null }
+  );
+  ```
+
+### Express 5 Native Async Error Propagation
+- Route handlers hỗ trợ bất đồng bộ gốc. Mọi exception (hoặc Zod validation fail) tự động lọt vào Centralized Error Middleware trong `app.ts`, không cần `try/catch` thủ công:
+  ```typescript
+  authRouter.post('/login', async (req, res) => {
+    const validated = LoginRequestSchema.parse(req.body);
+    const session = await loginService(validated);
+    res.json(session);
+  });
+  ```
+
+### Type-Safe API Fetcher (`archonFetch`)
+- Frontend sử dụng helper `archonFetch` tại `shared/api/client.ts` để gọi API. Bộ phân tích `archon drift` tự động nhận diện và so khớp với Server Express routes trong thời gian thực.
+
+### JSDoc Trích Xuất Ngữ Nghĩa Cho AI
+- Viết JSDoc phía trên route Express để Archon tự động đưa mô tả vào `.context/MAP.md`:
+  ```typescript
+  /**
+   * Xác thực thông tin đăng nhập và cấp phát phiên làm việc (AuthSession) kèm JWT
+   */
+  authRouter.post('/login', async (req, res) => { ... });
+  ```
+
