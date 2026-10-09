@@ -2,6 +2,7 @@ export * from './config/schema.js';
 export * from './config/loader.js';
 export * from './reporter/types.js';
 export * from './reporter/console.js';
+export * from './reporter/github.js';
 export * from './rules/line-limit.js';
 export * from './rules/boundary.js';
 export * from './rules/dependency.js';

@@ -1,13 +1,10 @@
 {
-  "name": "@archon/skeleton",
+  "name": "eslint-plugin-archon",
   "version": "0.1.0",
-  "description": "Context skeleton builder for Archon - extracts compact type & module signatures for AI agents",
+  "description": "ESLint plugin for Archon - Deterministic Architectural Guardrails for AI-assisted engineering",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "archon-skeleton": "./dist/cli.js"
-  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -21,13 +18,16 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "commander": "^13.1.0",
-    "fast-glob": "^3.3.3",
-    "picocolors": "^1.1.1",
-    "typescript": "^5.7.3"
+    "@archon/core": "workspace:*"
   },
   "devDependencies": {
+    "@types/eslint": "^9.6.1",
     "@types/node": "^22.13.1",
-    "rimraf": "^6.0.1"
+    "eslint": "^9.20.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "eslint": ">=8.0.0"
   }
 }

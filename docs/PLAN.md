@@ -82,3 +82,11 @@ Phase 6: End-to-End Testing & Verification                          [COMPLETED]
 - Kiểm thử tích hợp MCP Client qua `InMemoryTransport`.
 - Kiểm thử bóc tách Express routes và phát hiện vòng lặp `A -> B -> A`.
 - Kiểm thử E2E Scaffolding tự động hóa (`scripts/test-e2e.mjs`).
+
+### Phase 7: Advanced Superpowers & Ecosystem Guardrails (Hoàn thành)
+- **`eslint-plugin-archon`**: Package riêng biệt cung cấp rule ESLint chuẩn (`max-lines`, `no-deep-module-imports`, `no-client-server-leak`, `dependency-freeze`) hỗ trợ cả Flat Config & Legacy. Tự động cảnh báo ngay trong Cursor/VSCode editor.
+- **Contract Drift Checker (`archon drift`)**: Phát hiện lệch pha giữa Frontend (`fetch`/`axios`) và Backend Express route endpoints, bắt lỗi 404 và lệch HTTP method ngay khi compile time.
+- **Machine-readable Patch Suggestions (MCP)**: Tool `archon_validate_proposal` trả về khối structured JSON patch (`replace-import`, `remove-import`, `decompose`) giúp AI agents sửa code vi phạm chỉ trong 1 turn duy nhất.
+- **MCP Tool `archon_check_contract_drift`**: Công cụ thứ 7 cho AI tra cứu và kiểm tra đồng bộ hợp đồng API toàn stack.
+- **GitHub Action PR Guardian (`archon ci`)**: Tự động bình luận trên GitHub PR, đánh giá điểm số Architectural Health Score, ước tính token tiết kiệm, và phát ra GitHub Actions annotations (`::error::`).
+

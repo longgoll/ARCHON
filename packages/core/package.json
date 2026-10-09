@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "tsx --test test/linter.test.ts",
+    "test": "tsx --test test/**/*.test.ts",
     "clean": "rimraf dist"
   },
   "dependencies": {

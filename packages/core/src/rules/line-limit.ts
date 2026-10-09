@@ -26,6 +26,15 @@ export function checkLineLimit(
       message: `Main UI Component file has ${count} lines (threshold: ${config.rules.maxComponentLines}).`,
       remediation: `Extract sub-views/child components into separate files under '${suggestedDir}/${fileName}-section.tsx'.`,
       severity,
+      patch: {
+        type: 'decompose',
+        action: `Run 'archon fix --target ${filePath}' or call tool 'archon_auto_decompose'`,
+        details: {
+          currentLines: count,
+          maxLines: config.rules.maxComponentLines,
+          targetFile: filePath,
+        },
+      },
     };
   }
 
@@ -38,6 +47,15 @@ export function checkLineLimit(
       message: `File exceeds maximum allowed lines: ${count} lines (threshold: ${config.rules.maxFileLines}).`,
       remediation: `Decompose '${fileName}' by extracting helpers, sub-services, or splitting responsibilities into smaller files under 200 lines.`,
       severity,
+      patch: {
+        type: 'decompose',
+        action: `Run 'archon fix --target ${filePath}' or split file into modular sub-services`,
+        details: {
+          currentLines: count,
+          maxLines: config.rules.maxFileLines,
+          targetFile: filePath,
+        },
+      },
     };
   }
 

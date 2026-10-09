@@ -39,6 +39,8 @@ npx archon-init
 | :--- | :--- |
 | `archon check` (hoặc `archon lint`) | Quét toàn bộ codebase kiểm tra vi phạm số dòng, deep import và circular dependency. |
 | `archon fix [--target <file>]` | Tự động phân tách file >200 lines hoặc component >120 lines bằng AST Auto-Decomposer. |
+| `archon drift` | Phát hiện lệch pha hợp đồng API giữa Frontend (fetch/axios) và Backend Express routes. |
+| `archon ci` (hoặc `archon guardian`) | Bộ kiểm thử CI/CD toàn diện, tự động sinh GitHub PR Comment & Step Summary. |
 | `archon skeleton` (hoặc `archon map`) | Sinh `.context/MAP.md`, `architecture.json`, `skeleton.d.ts` và `contracts.d.ts`. |
 | `archon watch` | Lắng nghe thay đổi mã nguồn trong mili-giây, tự động đồng bộ `.context/MAP.md` tức thì. |
 | `archon studio` (hoặc `archon visual`) | Khởi chạy Archon Studio Web Cockpit tại `http://localhost:4321`. |
@@ -60,13 +62,48 @@ Khi tạo dự án bằng `create-archon` hoặc `archon-init`, tệp **`.cursor
 }
 ```
 
-### 6 MCP Tools Cho AI Coding Agents:
+### 7 MCP Tools Cho AI Coding Agents:
 - **`archon_query_context`**: Tìm kiếm hàm, component, endpoint đã có trong vài chục tokens thay vì đọc cả repo.
-- **`archon_validate_proposal`**: Pre-flight validation code của AI trước khi ghi đè file (kiểm tra dòng và import gateway).
+- **`archon_validate_proposal`**: Pre-flight validation code của AI trước khi ghi đè file (kiểm tra dòng và import gateway) kèm **Machine-readable Patches (JSON)** để AI tự áp dụng fix trong 1 turn!
+- **`archon_check_contract_drift`**: Quét lệch pha giữa API Client và Route Server, cảnh báo ngay khi AI gọi endpoint sai hoặc nhầm HTTP method.
 - **`archon_auto_decompose`**: Cho phép AI tự gọi lệnh bóc tách nhỏ file khi thấy code vượt ngưỡng.
 - **`archon_get_module_contract`**: Lấy toàn bộ public contract của module (`index.ts`).
 - **`archon_lint_project`**: Chạy toàn bộ Linter và trả về danh sách vi phạm.
 - **`archon_get_architecture_map`**: Lấy bản đồ tóm tắt kiến trúc toàn dự án.
+
+---
+
+## 🎨 ESLint Plugin: `eslint-plugin-archon`
+
+Tích hợp trực tiếp vào Cursor và VS Code để editor gạch đỏ ngay khi AI sinh code vi phạm:
+
+```js
+// eslint.config.js (ESLint 9 Flat Config)
+import archon from 'eslint-plugin-archon';
+
+export default [
+  archon.configs['flat/recommended'],
+];
+```
+
+Hoặc legacy `.eslintrc`:
+```json
+{
+  "plugins": ["archon"],
+  "extends": ["plugin:archon/recommended"]
+}
+```
+
+---
+
+## 🛡️ GitHub Action PR Guardian
+
+Tự động chạy trên mọi Pull Request, gắn inline annotations và bình luận bảng điểm Architectural Health Score:
+
+Tệp cấu hình sẵn tại [`.github/workflows/archon-guardian.yml`](file:///d:/HoangLong/Dev/ARCHON/.github/workflows/archon-guardian.yml):
+- Quét vi phạm Boundary & Kích thước file.
+- Quét Fullstack Contract Drift (FE ⟷ BE).
+- Chấm điểm **Architectural Health Score (0-100)** và ước tính AI token tiết kiệm được.
 
 ---
 

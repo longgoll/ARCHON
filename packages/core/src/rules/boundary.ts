@@ -78,6 +78,12 @@ export function checkModuleBoundaries(
           message: `Client file illegally imports from server: '${imp.importPath}'.`,
           remediation: `Remove direct server import. Create an API endpoint in server router and call it via HTTP / client fetch.`,
           severity,
+          patch: {
+            type: 'remove-import',
+            line: imp.line,
+            originalText: imp.importPath,
+            action: `Remove direct server import '${imp.importPath}' and communicate via API contract`,
+          },
         });
       }
     }
@@ -110,6 +116,7 @@ export function checkModuleBoundaries(
 
       // Deep import into ANOTHER module
       if (targetModule !== currentModule && deepPath && deepPath !== '/' && deepPath !== '/index') {
+        const suggestedGateway = `@/modules/${targetModule}`;
         violations.push({
           rule: 'module-boundary',
           file: filePath,
@@ -117,6 +124,17 @@ export function checkModuleBoundaries(
           message: `Deep import into module '${targetModule}' is forbidden: '${imp.importPath}'.`,
           remediation: `Export '${path.basename(deepPath)}' through '@/modules/${targetModule}/index.ts' and import as: import { ... } from '@/modules/${targetModule}'.`,
           severity,
+          patch: {
+            type: 'replace-import',
+            line: imp.line,
+            originalText: imp.importPath,
+            suggestedText: suggestedGateway,
+            action: `Replace deep import with gateway import '${suggestedGateway}'`,
+            details: {
+              targetModule,
+              gateway: suggestedGateway,
+            },
+          },
         });
       }
     }
@@ -128,6 +146,7 @@ export function checkModuleBoundaries(
       const deepPath = relativeModuleMatch[2];
 
       if (targetModule !== currentModule && deepPath && deepPath !== '/' && deepPath !== '/index') {
+        const suggestedGateway = `@/modules/${targetModule}`;
         violations.push({
           rule: 'module-boundary',
           file: filePath,
@@ -135,6 +154,17 @@ export function checkModuleBoundaries(
           message: `Deep relative import into module '${targetModule}' is forbidden: '${imp.importPath}'.`,
           remediation: `Export necessary symbols via '${targetModule}/index.ts' and import via public gateway: '@/modules/${targetModule}'.`,
           severity,
+          patch: {
+            type: 'replace-import',
+            line: imp.line,
+            originalText: imp.importPath,
+            suggestedText: suggestedGateway,
+            action: `Replace relative deep import with gateway import '${suggestedGateway}'`,
+            details: {
+              targetModule,
+              gateway: suggestedGateway,
+            },
+          },
         });
       }
     }

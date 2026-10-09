@@ -80,6 +80,7 @@ export function verifySession(token: string): boolean {
       assert.ok(toolNames.includes('archon_get_module_contract'));
       assert.ok(toolNames.includes('archon_lint_project'));
       assert.ok(toolNames.includes('archon_get_architecture_map'));
+      assert.ok(toolNames.includes('archon_check_contract_drift'));
 
       const resourceList = await client.listResources();
       const resourceUris = resourceList.resources.map((r) => r.uri);
@@ -184,6 +185,8 @@ export function BillingPage() {
       assert.ok(text.includes('REJECTED'));
       assert.ok(text.includes('MODULE-BOUNDARY'));
       assert.ok(text.includes('Remediation'));
+      assert.ok(text.includes('archon-machine-patches'));
+      assert.ok(text.includes('@/modules/auth'));
     } finally {
       cleanupTestRepo();
     }

@@ -13,6 +13,7 @@ import {
 import {
   generateProjectSkeleton,
   generateContextMapMarkdown,
+  checkContractDrift,
   ProjectSkeleton,
   ModuleSkeleton,
 } from '@archon/skeleton';
@@ -202,6 +203,14 @@ export function createArchonMcpServer(options: ArchonMcpServerOptions = {}): Mcp
         };
       }
 
+      const patches = violations
+        .filter((v) => v.patch)
+        .map((v) => ({
+          rule: v.rule,
+          line: v.line,
+          ...v.patch,
+        }));
+
       const reportLines = [
         `❌ [REJECTED] Architectural Violations Found (${violations.length} issue(s)):\n`,
         `- File: \`${normalizedPath}\` (${lineCount} lines, max allowed: ${config.rules.maxFileLines})\n`,
@@ -210,10 +219,34 @@ export function createArchonMcpServer(options: ArchonMcpServerOptions = {}): Mcp
       for (const v of violations) {
         reportLines.push(`### [${v.rule.toUpperCase()}] ${v.message}`);
         if (v.line) reportLines.push(`- **Location:** Line ${v.line}`);
-        reportLines.push(`- **Remediation:** 🛠️ ${v.remediation}\n`);
+        reportLines.push(`- **Remediation:** 🛠️ ${v.remediation}`);
+        if (v.patch) {
+          reportLines.push(`- **Machine Patch Action:** \`${v.patch.action}\``);
+          if (v.patch.suggestedText) {
+            reportLines.push(`- **Suggested Replacement:** \`${v.patch.suggestedText}\``);
+          }
+        }
+        reportLines.push('');
       }
 
-      reportLines.push('⚠️ **ACTION REQUIRED:** Please refactor the code according to the remediations above BEFORE saving.');
+      if (patches.length > 0) {
+        reportLines.push('```json archon-machine-patches');
+        reportLines.push(
+          JSON.stringify(
+            {
+              status: 'REJECTED',
+              targetFile: normalizedPath,
+              violationsCount: violations.length,
+              patches,
+            },
+            null,
+            2
+          )
+        );
+        reportLines.push('```\n');
+      }
+
+      reportLines.push('⚠️ **ACTION REQUIRED:** Please apply the machine-readable patches or refactor the code according to the remediations above BEFORE saving.');
 
       return {
         content: [
@@ -402,6 +435,69 @@ export function createArchonMcpServer(options: ArchonMcpServerOptions = {}): Mcp
 
       for (const ext of res.extractedFiles) {
         reportLines.push(`- 📦 [${ext.kind.toUpperCase()}] \`${ext.filePath}\` (${ext.lines} lines)`);
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: reportLines.join('\n'),
+          },
+        ],
+      };
+    }
+  );
+
+  // ==========================================
+  // TOOL 7: archon_check_contract_drift
+  // ==========================================
+  server.tool(
+    'archon_check_contract_drift',
+    'Detect contract drift between Frontend API calls (fetch/axios) and Backend Express route endpoints. Flags unknown endpoints, mismatched HTTP methods, and orphaned server routes.',
+    {
+      clientDir: z
+        .string()
+        .optional()
+        .default('client/src')
+        .describe("Relative path to client source files (defaults to 'client/src')"),
+      serverDir: z
+        .string()
+        .optional()
+        .default('server/src')
+        .describe("Relative path to server source files (defaults to 'server/src')"),
+    },
+    async ({ clientDir, serverDir }) => {
+      const report = await checkContractDrift({
+        cwd,
+        clientDir,
+        serverDir,
+      });
+
+      if (!report.hasErrors) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `✅ [PASS] Fullstack API Contracts Synchronized!\n` +
+                `- Total Client API Calls Scanned: ${report.totalClientCalls}\n` +
+                `- Total Server Routes Registered: ${report.totalServerRoutes}\n` +
+                `- Orphan Routes (uncalled by client): ${report.orphanRoutes.length}\n` +
+                `- Status: 100% Contract Compliance. Zero drift detected.`,
+            },
+          ],
+        };
+      }
+
+      const reportLines = [
+        `❌ [CONTRACT DRIFT DETECTED] Found ${report.issues.length} API Mismatch Issue(s):\n`,
+        `- Client Directory: \`${clientDir}\`\n`,
+        `- Server Directory: \`${serverDir}\`\n`,
+      ];
+
+      for (const issue of report.issues) {
+        reportLines.push(`### [${issue.type}] ${issue.message}`);
+        reportLines.push(`- **Location:** \`${issue.file}:${issue.line}\``);
+        reportLines.push(`- **Remediation:** 🛠️ ${issue.remediation}\n`);
       }
 
       return {

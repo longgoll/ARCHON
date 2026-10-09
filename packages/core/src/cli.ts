@@ -6,7 +6,7 @@ import { runLinter } from './linter.js';
 import { printLintReport } from './reporter/console.js';
 import { decomposeFile } from './decomposer/index.js';
 import { startArchonStudio } from './studio/server.js';
-import { generateProjectSkeleton, watchProjectSkeleton } from '@archon/skeleton';
+import { generateProjectSkeleton, watchProjectSkeleton, checkContractDrift } from '@archon/skeleton';
 
 const program = new Command();
 
@@ -167,6 +167,87 @@ program
       console.log(pc.gray('Press Ctrl+C to close studio.\n'));
     } catch (error: any) {
       console.error(pc.red(`Archon Studio Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
+
+// 6. archon drift
+program
+  .command('drift')
+  .description('Check contract drift between Frontend API calls (fetch/axios) and Backend Express route endpoints')
+  .option('-c, --cwd <path>', 'Working directory', process.cwd())
+  .option('--client <dir>', 'Client source directory', 'client/src')
+  .option('--server <dir>', 'Server source directory', 'server/src')
+  .action(async (options) => {
+    try {
+      console.log(pc.blue('🔍 Scanning for API Contract Drift between Frontend and Backend...'));
+      const report = await checkContractDrift({
+        cwd: options.cwd,
+        clientDir: options.client,
+        serverDir: options.server,
+      });
+
+      console.log(
+        pc.gray(`   Client Calls: ${report.totalClientCalls} | Server Endpoints: ${report.totalServerRoutes}`)
+      );
+
+      if (!report.hasErrors) {
+        console.log(pc.bold(pc.green('\n✔ ZERO CONTRACT DRIFT DETECTED!')));
+        console.log(pc.green('   All Client API calls match registered Server routes perfectly.'));
+        if (report.orphanRoutes.length > 0) {
+          console.log(
+            pc.yellow(`   ℹ ${report.orphanRoutes.length} server route(s) registered but not called by client yet.`)
+          );
+        }
+        return;
+      }
+
+      console.log(pc.bold(pc.red(`\n❌ FOUND ${report.issues.length} CONTRACT DRIFT ISSUE(S):\n`)));
+      for (const issue of report.issues) {
+        console.log(pc.red(`  • [${issue.type}] ${issue.message}`));
+        console.log(pc.gray(`    File: ${issue.file}:${issue.line}`));
+        console.log(pc.yellow(`    🛠️ Remediation: ${issue.remediation}\n`));
+      }
+
+      process.exit(1);
+    } catch (error: any) {
+      console.error(pc.red(`Contract Drift Check Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
+
+// 7. archon ci / archon guardian
+program
+  .command('ci')
+  .alias('guardian')
+  .description('Run complete CI Guardian check (Linter + Contract Drift) and emit GitHub PR summaries & annotations')
+  .option('-c, --cwd <path>', 'Working directory', process.cwd())
+  .option('-o, --output <file>', 'Path to save markdown report artifact (e.g. archon-pr-report.md)')
+  .action(async (options) => {
+    try {
+      const cwd = options.cwd;
+      const config = loadGuardianConfig(cwd);
+      console.log(pc.blue('🛡️  Running Archon CI PR Guardian...'));
+
+      const lintReport = await runLinter({ cwd, config });
+      const driftReport = await checkContractDrift({ cwd });
+
+      const { generatePrGuardianReport } = await import('./reporter/github.js');
+      const result = generatePrGuardianReport(lintReport, driftReport, {
+        cwd,
+        outputPath: options.output,
+      });
+
+      console.log('\n' + result.markdownSummary + '\n');
+
+      if (result.hasErrors) {
+        console.log(pc.red(`❌ Archon CI Guardian failed with ${result.totalViolations} boundary issue(s) and ${result.totalDriftIssues} contract drift(s).`));
+        process.exit(1);
+      } else {
+        console.log(pc.green('✔ All Archon CI Guardian architectural checks passed successfully!'));
+      }
+    } catch (error: any) {
+      console.error(pc.red(`Archon CI Error: ${error.message}`));
       process.exit(1);
     }
   });
